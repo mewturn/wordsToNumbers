@@ -12,12 +12,21 @@ def words_to_numbers(string, lang="en"):
 def en_words_to_numbers(string):    
     # Initialize variables
     output_number = 0
+    output_string = ""
+    prev_type = None
     value = 0
     
     # Process the strings
     string = clean_string(string)
     nums = [i for i in string.split(" ") if not i.isspace() and i != ""]
     print(nums)
+
+    # If literal is True: We take the words literally, used for verbal expressions
+    # Idea: literal = True if no "units" exist
+    # Examples: 
+    # Nineteen Ninety-Eight = 1998 (year)
+    # One Twenty = 120
+    literal = not has_units(nums)
     
     # Do
     for i in range(len(nums)):
@@ -25,10 +34,42 @@ def en_words_to_numbers(string):
         print(num)
         try:
             this_type = get_type(num)
-            if this_type == "ones" or this_type == "tens":
-                value += int(conv[num])
+            if this_type == "ones":
+                if literal:
+                    if prev_type == "tens":
+                        value += int(conv[num])
+                        output_string += str(value)
+                        value = 0
+                    else:
+                        output_string += conv[num]
+                else:
+                    value += int(conv[num])
+            elif this_type == "special_tens":
+                if literal:
+                    output_string += conv[num]
+                else:
+                    value += int(conv[num])
+            elif this_type == "tens":
+                if literal:
+                    try:
+                        next_type = get_type(nums[i+1])
+                        if next_type == "ones":
+                            value += int(conv[num])
+                        else:
+                            output_string += conv[num]
+                    except IndexError:
+                        output_string += conv[num]
+                else:
+                    value += int(conv[num])
             elif this_type == "units":
-                value *= int(conv[num])
+                # If the first sub-string is a unit, then we append "one" - i.e. intialize the value instead of multiplying
+                if i == 0:
+                    value = int(conv[num])
+
+                # Otherwise we multiply the value by the unit (i.e. hundred, thousand, etc..)
+                else:
+                    value *= int(conv[num])
+
                 if "thousand" in num or "million" in num or "billion" in num:
                     output_number += value
                     value = 0
@@ -36,7 +77,9 @@ def en_words_to_numbers(string):
             if i == len(nums) - 1:
                 output_number += value
                 value = 0
-            print(output_number, value)
+            prev_type = this_type
+            print(output_number, output_string)
+
         except KeyError as e:
             print(repr(e))
     
@@ -48,21 +91,19 @@ def zhtw_words_to_numbers(string):
 def get_type(num_string):
     if num_string in ones:
         return "ones"
-    if num_string in tens or num_string in special_tens:
+    if num_string in tens:
         return "tens"
+    if num_string in special_tens:
+        return "special_tens"
     if num_string in units:
         return "units"
 
-def get_add_type(this, other):
-    if this == "ones":
-        if other == "ones":
-            return string_add
-        return sum_add
-    elif this == "tens":
-        if other == "units":
-            return sum_add
-        return string_add
-    return string_add
+def has_units(num_list):
+    for unit in units:
+        if unit in num_list:
+            return True
+    else:
+        return False
 
 def string_add(curr, string):
     return string + curr
