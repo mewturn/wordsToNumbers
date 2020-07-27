@@ -4,7 +4,8 @@ def words_to_numbers(string, lang="en"):
         "zh-tw": zhtw_words_to_numbers
     }
     try:
-        func_dict[lang](string)
+        return func_dict[lang](string)
+
     except KeyError:
         langs = ", ".join([i for i in func_dict])
         print(f"Language code '{lang}' does not exist. Valid language codes: [{langs}]")
@@ -31,10 +32,13 @@ def en_words_to_numbers(string):
     # Do
     for i in range(len(nums)):
         num = nums[i]
-        print(num)
+
         try:
             this_type = get_type(num)
-            if this_type == "ones":
+            if this_type == "number":
+                value += float(num)
+
+            elif this_type == "ones":
                 if literal:
                     if prev_type == "tens":
                         value += int(conv[num])
@@ -78,12 +82,16 @@ def en_words_to_numbers(string):
                 output_number += value
                 value = 0
             prev_type = this_type
-            print(output_number, output_string)
 
         except KeyError as e:
             print(repr(e))
     
-    return output_number
+    # Cast to int
+    output_number = int(output_number)
+
+    if output_string == "":
+        return output_number
+    return output_string
 
 def zhtw_words_to_numbers(string):
     pass
@@ -97,6 +105,8 @@ def get_type(num_string):
         return "special_tens"
     if num_string in units:
         return "units"
+    if num_string.isnumeric() or isdecimal(num_string):
+        return "number"
 
 def has_units(num_list):
     for unit in units:
@@ -111,7 +121,23 @@ def string_add(curr, string):
 def sum_add(curr, string):
     return str(eval(curr + string))
 
-def clean_string(string):
-    string = re.sub(r'(\b)(and)(\b)', " ", string)
-    string = re.sub(r'[^\w]', " ", string)
+def split_mixed_number(string):
+    m = re.findall('\\d[a-zA-z\u4e00-\u9fff]', string)
+    for i in m:
+        rep = i[0] + " " + i[-1]
+        string = string.replace(i, rep)
+        
     return string
+
+def isdecimal(string):
+    return sum([1 for i in string.split(".") if i.isnumeric()]) == 2
+
+def process_num(number):
+    return number
+
+def clean_string(string, lang="en"):
+    if lang == "en":
+        string = re.sub(r'(\b)(and)(\b)', " ", string)
+        # string = re.sub(r'(.)', " point ", string)
+        string = re.sub(r'[^\w.]', " ", string)
+    string = split_mixed_number(string)
